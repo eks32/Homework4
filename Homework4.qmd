@@ -1,0 +1,231 @@
+---
+title: "Homework 4"
+author: "Eric Song"
+format: html
+editor: visual
+---
+
+Loading libraries tidyverse,readxl,dplyr: Echo=false, include=false (getting rid of annoying warnings)
+```{r,echo=FALSE,include=FALSE}
+library(tidyverse)
+library(readxl)
+library(dplyr)
+```
+
+# Task 1
+
+### 1
+You can use ".../MyData.csv".
+Example code:
+
+```{r, eval=FALSE}
+My_Data <-read.csv(".../MyData.csv")
+```
+
+### 2
+It keeps your files organized into one place.  More importantly, it makes it so your code replicable by someone else which is important when collaborating.    
+
+
+### 3
+
+Git is a version control software used to make it easy to track changes in code and/or revert code if necessary.  It also allows groups to work together on projects without overwriting each other.  You can also make branches of code so you can test new code without interfering with your live branch.
+
+Github is the web-based git accessible at www.github.com.  It hosts git repositories.  
+
+### 4
+
+When using print() for our data, tibble will only print the first few observations.  It also prints the data in a more clean intuitive format.      
+
+Also tibble does not coerce down to a vector when you subset to one column with [].  Meaning tibble preserves our column type where as data.frames might drop our column type if subsetting one column.  
+
+### 5
+
+```{r, eval=FALSE}
+as_tibble(iris) |>
+  select(starts_with("Petal"), Species) |>
+  filter(Petal.Length < 1.55) |>
+  arrange(Species)
+```
+
+
+# Task 2: Reading Delimited Data
+
+## Glass Data
+
+### 1
+```{r}
+glass_data <- read_csv("https://www4.stat.ncsu.edu/~online/datasets/glass.data", col_names = FALSE) |>
+  rename(
+    IdNumber = X1,
+    RI       = X2,
+    Na       = X3,
+    Mg       = X4,
+    Al       = X5,
+    Si       = X6,
+    K        = X7,
+    Ca       = X8,
+    Ba       = X9,
+    Fe       = X10,
+    Type_of_Glass = X11
+  )
+
+glass_data
+```
+
+### 2
+
+```{r}
+glass_data <- glass_data |>
+  mutate(Type_of_Glass = ifelse(Type_of_Glass == 1, "building_windows_float_processed",
+                ifelse(Type_of_Glass == 2, "building_windows_non_float_processed",
+                ifelse(Type_of_Glass == 3, "vehicle_windows_float_processed",
+                ifelse(Type_of_Glass == 4, "vehicle_windows_non_float_processed",
+                ifelse(Type_of_Glass == 5, "containers",
+                ifelse(Type_of_Glass == 6, "tableware",
+                ifelse(Type_of_Glass == 7, "headlamps",NA))))))))
+
+glass_data
+
+```
+
+
+### 3 
+
+
+```{r}
+glass_data |>
+  filter(Fe < 0.2, Type_of_Glass == c("tableware", "headlamps"))
+
+```
+
+## Yeast Data
+
+### 1
+```{r}
+yeast_data <- "https://www4.stat.ncsu.edu/~online/datasets/yeast.data" |>
+  read_table(col_names = c("seq_name", "mcg", "gvh", "alm", "mit", "erl", "pox", "vac", "nuc", "class"))
+
+yeast_data
+```
+
+### 2
+
+```{r}
+yeast_data<-yeast_data |>
+  select(-seq_name,-nuc)
+colnames(yeast_data)
+```
+
+### 3
+
+```{r}
+yeast_data |>
+  group_by(class) |>
+  mutate(
+    across(where(is.numeric), 
+           list(mean = mean, median = median)))
+```
+
+
+# Task 2: Combining Excel & Delimited Data
+
+### 1
+```{r}
+white_wine_data <- read_excel("white-wine.xlsx", sheet = 1)
+white_wine_data
+```
+
+### 2
+```{r}
+col_names_xcl <- read_excel("white-wine.xlsx", sheet = 2)
+new_colnames<-col_names_xcl[[1]]
+colnames(white_wine_data) <-new_colnames
+white_wine_data
+```
+
+### 3
+```{r}
+white_wine_data <- white_wine_data |>
+    mutate(wine_type ="white")
+white_wine_data
+white_wine_data[13]
+```
+
+### 4
+```{r}
+red_wine_data <-read_delim("https://www4.stat.ncsu.edu/~online/datasets/red-wine.csv",delim = ";")
+
+#Couldn't get colnames() working with chaining.
+colnames(red_wine_data)<-new_colnames
+
+red_wine_data <- red_wine_data |>
+  mutate(wine_type = "red")
+
+
+red_wine_data
+red_wine_data[13]
+
+```
+
+### 5
+```{r}
+total_wine_data <- bind_rows(white_wine_data, red_wine_data)
+total_wine_data
+```
+
+
+### 6
+*see 10 if used in a full chain*
+```{r}
+high_quality_wine <- total_wine_data |>
+  filter(quality>6.5,alcohol<132)
+high_quality_wine
+```
+
+
+
+### 7
+*see 10 if used in a full chain*
+```{r}
+high_quality_wine <-high_quality_wine |>
+  arrange(desc(quality))
+high_quality_wine
+```
+
+
+### 8
+*see 10 if used in a full chain*
+```{r}
+high_quality_wine <-high_quality_wine |>
+  select(contains("acid"),alcohol,wine_type,quality)
+high_quality_wine
+```
+
+
+### 9
+*see 10 if used in a full chain*
+```{r}
+high_quality_wine <-high_quality_wine |>
+  group_by(quality) |>
+  mutate(alcohol_mean = mean(alcohol,na.rm=TRUE),
+         alcohol_sd = sd(alcohol,na.rm=TRUE))
+
+#showing all columns
+head(high_quality_wine)
+high_quality_wine[7:8]
+```
+
+### 10 full chain
+```{r}
+high_quality_wine <- total_wine_data |>
+  filter(quality>6.5,alcohol<132) |>
+  arrange(desc(quality)) |>
+  select(contains("acid"),alcohol,wine_type,quality) |>
+  group_by(quality) |>
+  mutate(alcohol_mean = mean(alcohol),
+         alcohol_sd = sd(alcohol))
+
+#showing all columns
+head(high_quality_wine)
+high_quality_wine[7:8]
+```  
